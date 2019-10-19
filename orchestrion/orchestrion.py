@@ -8,9 +8,13 @@ import pathlib
 import schedule
 import time
 
+from output import influxdb
+
 logger = logging.getLogger(__name__)
+config = configparser.ConfigParser()
 config_path = "config.ini"
 
+# Init options
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--verbose", help="Increase verbosity of output", action="store_true")
 parser.add_argument("-d", "--debug", help="Enable debug mode", action="store_true")
@@ -30,14 +34,20 @@ if args.debug:
 if args.config and args.config.exists():
     config_path = args.config
 
-config = configparser.ConfigParser()
 config.read(config_path)
 
+# Init influx
+influx_config = config["influxdb"]
+influxclient = influxdb.InfluxClient(influx_config)
+config.remove_section("influxdb")
+
+
 for module in config.sections():
-    if config[module].getboolean("active"):
-        loaded_module = getattr(import_module(f"modules.{module}.main"), "ServiceModule")(config[module])
-        interval = loaded_module.interval if args.interval is None else args.interval
-        schedule.every(interval).minutes.do(loaded_module.run)
+    loaded_module = getattr(import_module(f"modules.{module}.main"), "ServiceModule")(
+        config[module], influxclient.write
+    )
+    interval = loaded_module.interval if args.interval is None else args.interval
+    schedule.every(interval).minutes.do(loaded_module.run)
 
 while True:
     schedule.run_pending()
