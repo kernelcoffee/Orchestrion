@@ -38,7 +38,7 @@ for module in config.sections():
         loaded_module = getattr(import_module(f"modules.{module}.main"), "ServiceModule")(config[module])
         interval = loaded_module.interval if args.interval is None else args.interval
         schedule.every(interval).minutes.do(loaded_module.run)
-        
+
 while True:
     schedule.run_pending()
     time.sleep(1)
