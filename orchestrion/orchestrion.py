@@ -28,7 +28,7 @@ if args.verbose:
     logging.basicConfig(level=logging.INFO)
 
 # DEBUG
-if args.debug or os.environ["DEBUG"]:
+if args.debug or os.environ.get("DEBUG"):
     logging.basicConfig(level=logging.DEBUG)
 
 # CONFIG PATH
@@ -50,6 +50,7 @@ for module in config.sections():
     interval = loaded_module.interval if args.interval is None else args.interval
     schedule.every(interval).minutes.do(loaded_module.run)
 
+schedule.run_all()
 while True:
     schedule.run_pending()
     time.sleep(1)
