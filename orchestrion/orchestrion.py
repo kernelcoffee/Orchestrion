@@ -1,5 +1,6 @@
 from importlib import import_module
 
+import os
 import logging
 import configparser
 import argparse
@@ -27,7 +28,7 @@ if args.verbose:
     logging.basicConfig(level=logging.INFO)
 
 # DEBUG
-if args.debug:
+if args.debug or os.environ["DEBUG"]:
     logging.basicConfig(level=logging.DEBUG)
 
 # CONFIG PATH
@@ -41,8 +42,8 @@ influx_config = config["influxdb"]
 influxclient = influxdb.InfluxClient(influx_config)
 config.remove_section("influxdb")
 
-
 for module in config.sections():
+    logger.info(f"Loading module {module}")
     loaded_module = getattr(import_module(f"modules.{module}.main"), "ServiceModule")(
         config[module], influxclient.write
     )

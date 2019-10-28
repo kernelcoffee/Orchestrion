@@ -47,3 +47,15 @@ interval=30
 ```bash
 python orchestrion/orchestrion.py -c <path_to_config.ini>
 ```
+
+## Docker
+
+Build Docker image
+```bash
+docker build -t orchestion .
+```
+
+Run docker image
+```
+docker run -d -v <config_folder_path>:/config --name orchestrion orchestrion
+```
