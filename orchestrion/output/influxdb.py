@@ -26,8 +26,7 @@ class InfluxClient:
     def write(self, data):
         try:
             logger.debug(f"Writing to influxdb {data}")
-
-            print(self.client.write_points(data))
+            self.client.write_points(data)
         except (InfluxDBClientError, ConnectionError, InfluxDBServerError) as e:
             if hasattr(e, "code") and e.code == 404:
                 logger.info(e)
