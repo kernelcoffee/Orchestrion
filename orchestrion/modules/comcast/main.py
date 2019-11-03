@@ -52,8 +52,10 @@ class ServiceModule:
 
         logger.debug("Posting to login...")
         res = self.session.post(URL_LOGIN, data=data)
-        assert res.status_code == 200
-        logger.info("Login sucessful")
+        if res.status_code == 200:
+            logger.info("Login sucessful")
+        else:
+            logger.info("Login failed")
 
     def _format_output(self, js):
         return [

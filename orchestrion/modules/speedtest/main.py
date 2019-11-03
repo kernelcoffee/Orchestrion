@@ -1,5 +1,6 @@
 import speedtest
 
+
 class ServiceModule:
     def __init__(self, config, output):
         self.interval = int(config["interval"])
@@ -7,7 +8,8 @@ class ServiceModule:
         self.speedtester = speedtest.Speedtest()
 
     def _format_output(self, result):
-        return [{
+        return [
+            {
                 "measurement": "speedtest",
                 "fields": {
                     "download": result["download"],
@@ -17,7 +19,8 @@ class ServiceModule:
                     "server_city": result["server"]["name"],
                     "server_country": result["server"]["country"],
                 },
-        }]
+            }
+        ]
 
     def run(self):
         self.speedtester.get_best_server()
