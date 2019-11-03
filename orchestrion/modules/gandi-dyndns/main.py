@@ -14,7 +14,7 @@ class ServiceModule:
         self.write = output
         self.api_secret = config["api_secret"]
         self.domain = config["domain"]
-        self.subdomains = config["subdomains"].split(",")
+        self.subdomains = [item.strip() for item in config["subdomains"].split(",")]
         self.public_ip = None
         self.ttl = 300
 
