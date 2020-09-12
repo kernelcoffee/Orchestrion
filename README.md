@@ -50,12 +50,26 @@ python orchestrion/orchestrion.py -c <path_to_config.ini>
 
 ## Docker
 
-Build Docker image
+Build & run Docker image
 ```bash
 docker build -t orchestion .
+docker run -d -v /path/to/config/folder:/config --name orchestrion orchestrion
+
 ```
 
-Run docker image
+docker hub
 ```
-docker run -d -v <config_folder_path>:/config --name orchestrion orchestrion
+docker run -d -e DEBUG="true" -v /path/to/config/folder:/config --name orchestrion kernelcoffee/orchestrion
+```
+
+docker-compose
+```
+  orchestrion:
+    container_name: orchestrion
+    image: kernelcoffee/orchestrion
+    environment:
+      DEBUG: "true"
+    volumes:
+      - /path/to/config/folder:/config
+
 ```

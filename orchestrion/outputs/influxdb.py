@@ -30,7 +30,7 @@ class InfluxClient:
         except (InfluxDBClientError, ConnectionError, InfluxDBServerError) as e:
             if hasattr(e, "code") and e.code == 404:
                 logger.info(e)
-                self.client.create_database(self.client.database)
+                self.client.create_database(config.get("Database", fallback="orchestrion"))
                 self.client.write_points(data)
             else:
                 logger.debug(f"Error writing to influx {e}")

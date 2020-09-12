@@ -9,7 +9,7 @@ import pathlib
 import schedule
 import time
 
-from output import influxdb
+from outputs import influxdb
 
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
@@ -44,7 +44,7 @@ config.remove_section("influxdb")
 
 for module in config.sections():
     logger.info(f"Loading module {module}")
-    loaded_module = getattr(import_module(f"modules.{module}.main"), "ServiceModule")(
+    loaded_module = getattr(import_module(f"agents.{module}.main"), "ServiceModule")(
         config[module], influxclient.write
     )
     interval = loaded_module.interval if args.interval is None else args.interval
