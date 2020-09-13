@@ -10,21 +10,20 @@ AIRNOW_URL = "https://airnowgovapi.com/reportingarea/get"
 class ServiceModule:
     def __init__(self, config, output):
         self.interval = int(config["interval"])
-        self.latitude = config["latitude"]
-        self.longitude = config["longitude"]
-        self.stateCode = config["stateCode"]
-        self.maxDistance = config["maxDistance"]
         self.output = output
         self.last_report = dict()
+        self.payload = {
+            "latitude": config["latitude"],
+            "longitude": config["longitude"],
+            "stateCode": config["stateCode"],
+            "maxDistance": config["maxDistance"],
+        }
 
     def _format_output(self, js, report_date: int):
         return [
             {
                 "measurement": js["parameter"],
-                "tags": {
-                    "location": js["reportingArea"],
-                    "stateCode": js["stateCode"],
-                },
+                "tags": {"location": js["reportingArea"], "stateCode": js["stateCode"],},
                 "time": report_date * 1000000000,
                 "fields": {
                     "aqi": js["aqi"],
@@ -36,21 +35,21 @@ class ServiceModule:
         ]
 
     def run(self):
-        data = {
-            "latitude": self.latitude,
-            "longitude": self.longitude,
-            "stateCode": self.stateCode,
-            "maxDistance": self.maxDistance,
-        }
-
-        res = requests.post(AIRNOW_URL, data=data)
+        res = requests.post(AIRNOW_URL, data=self.payload)
         if res.status_code == 200:
-            entry = res.json()[0]
-            report_date = entry["issueDate"] + "-" + entry["time"]
-            report_date = int(datetime.strptime(report_date, "%m/%d/%y-%H:%M").timestamp())
-            data = self._format_output(entry, report_date)
+            logger.debug(res.json())
+            for entry in res.json():
+                if entry["issueDate"] and entry["time"]:
+                    report_date = entry["issueDate"] + "-" + entry["time"]
+                    logger.debug(entry)
+                    report_date = int(datetime.strptime(report_date, "%m/%d/%y-%H:%M").timestamp())
+                    data = self._format_output(entry, report_date)
 
-            if entry["parameter"] not in self.last_report or self.last_report[entry["parameter"]] != report_date:
-                self.last_report[entry["parameter"]] = report_date
-                logger.debug(data)
-                self.output(data)
+                    if (
+                        entry["parameter"] not in self.last_report
+                        or self.last_report[entry["parameter"]] != report_date
+                        and self.last_report[entry["parameter"]] < report_date
+                    ):
+                        self.last_report[entry["parameter"]] = report_date
+                        logger.info(data)
+                        self.output(data)
