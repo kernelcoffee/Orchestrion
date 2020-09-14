@@ -32,6 +32,7 @@ class ServiceModule:
 
         results = []
         for result in json["results"]:
-            logger.debug(result)
+            if "ParentID" in result:
+                continue
             results.append(self._format_output(result))
         self.output(results)
