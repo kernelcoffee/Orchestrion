@@ -1,10 +1,9 @@
 import requests
 import logging
-from datetime import datetime, timezone
+import pytz
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
-
-AIRNOW_URL = "https://airnowgovapi.com/reportingarea/get"
 
 
 class ServiceModule:
@@ -12,44 +11,50 @@ class ServiceModule:
         self.interval = int(config["interval"])
         self.output = output
         self.last_report = dict()
-        self.payload = {
-            "latitude": config["latitude"],
-            "longitude": config["longitude"],
-            "stateCode": config["stateCode"],
-            "maxDistance": config["maxDistance"],
-        }
+        self.latitude = config["latitude"]
+        self.longitude = config["longitude"]
+        self.stateCode = config["stateCode"]
+        self.postcode = config["postcode"]
+        self.maxdistance = config["maxdistance"]
+        self.api_key = config["api_key"]
 
-    def _format_output(self, js, report_date: int):
+    def _format_output(self, json, report_date: int):
         return [
             {
-                "measurement": js["parameter"],
-                "tags": {"location": js["reportingArea"], "stateCode": js["stateCode"],},
-                "time": report_date * 1000000000,
+                "measurement": json["ParameterName"],
+                "tags": {"location": json["ReportingArea"], "postcode": self.postcode},
+                "time": report_date,
                 "fields": {
-                    "aqi": js["aqi"],
-                    "category": js["category"],
-                    "isActionDay": js["isActionDay"],
-                    "discussion": js["discussion"],
+                    "aqi": json["AQI"],
+                    "zone": json["Category"]["Number"],
+                    "libelle": json["Category"]["Name"],
                 },
             }
         ]
 
     def run(self):
-        res = requests.post(AIRNOW_URL, data=self.payload)
-        if res.status_code == 200:
-            logger.debug(res.json())
-            for entry in res.json():
-                if entry["issueDate"] and entry["time"]:
-                    report_date = entry["issueDate"] + "-" + entry["time"]
-                    logger.debug(entry)
-                    report_date = int(datetime.strptime(report_date, "%m/%d/%y-%H:%M").timestamp())
-                    data = self._format_output(entry, report_date)
+        try:
+            res = requests.post(
+                f"http://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude={self.latitude}&longitude={self.longitude}&distance={self.maxdistance}&API_KEY={self.api_key}"
+            )
+        except Exception as e:
+            logger.error(str(e))
+            return
 
-                    if (
-                        entry["parameter"] not in self.last_report
-                        or self.last_report[entry["parameter"]] != report_date
-                        and self.last_report[entry["parameter"]] < report_date
-                    ):
-                        self.last_report[entry["parameter"]] = report_date
-                        logger.info(data)
-                        self.output(data)
+        if res.status_code != 200:
+            logger.error(res.content)
+            return
+
+        for entry in res.json():
+            report_date = pytz.timezone("US/Pacific").localize(
+                datetime.strptime(entry["DateObserved"].strip(), "%Y-%m-%d").replace(hour=entry["HourObserved"])
+            )
+            report_date = int(report_date.astimezone(pytz.utc).timestamp()) * 1000000000
+
+            if (
+                entry["ParameterName"] not in self.last_report
+                or self.last_report[entry["ParameterName"]] != report_date
+                and self.last_report[entry["ParameterName"]] < report_date
+            ):
+                self.last_report[entry["ParameterName"]] = report_date
+                self.output(self._format_output(entry, report_date))
