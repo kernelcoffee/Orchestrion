@@ -10,6 +10,7 @@ class InfluxClient:
         logger.info("Create InfluxDB client with:")
         self.address = str(config.get("Address", fallback="localhost"))
         self.port = config.getint("Port", fallback=8086)
+        self.database = config.get("Database", fallback="orchestrion")
 
         logger.debug(f"InfluxDB client connection to {self.address}:{self.port}")
 
@@ -18,7 +19,7 @@ class InfluxClient:
             self.port,
             username=config.get("Username", fallback=""),
             password=config.get("Password", fallback=""),
-            database=config.get("Database", fallback="orchestrion"),
+            database=self.database,
             ssl=config.getboolean("SSL", fallback=False),
             verify_ssl=config.getboolean("Verify_SSL", fallback=True),
         )
@@ -30,7 +31,9 @@ class InfluxClient:
         except (InfluxDBClientError, ConnectionError, InfluxDBServerError) as e:
             if hasattr(e, "code") and e.code == 404:
                 logger.info(e)
-                self.client.create_database(config.get("Database", fallback="orchestrion"))
+                self.client.create_database(self.database)
                 self.client.write_points(data)
             else:
                 logger.debug(f"Error writing to influx {e}")
+        except Exception as e:
+            logger.debug("Undefined error : {e}")
